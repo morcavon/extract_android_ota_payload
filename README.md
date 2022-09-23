@@ -29,5 +29,5 @@ Extracting 'modem.img'
 ## Dependencies
 
 ```
-python-protobuf,bzcat,xzcat
+python-protobuf
 ```

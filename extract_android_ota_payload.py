@@ -8,6 +8,8 @@ import struct
 import subprocess
 import sys
 import zipfile
+import lzma
+import bz2
 
 # from https://android.googlesource.com/platform/system/update_engine/+/refs/heads/master/scripts/update_payload/
 import update_metadata_pb2
@@ -74,20 +76,27 @@ class Payload(object):
     self.metadata_size = self.header.size + self.header.manifest_len
     self.data_offset = self.metadata_size + self.header.metadata_signature_len
 
+
 def decompress_payload(command, data, size, hash):
-  p = subprocess.Popen([command, '-'], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-  r = p.communicate(data)[0]
+  if command == 'xzcat':
+    r = lzma.decompress(data)
+  else:
+    r = bz2.decompress(data)
+   
   if len(r) != size:
     print("Unexpected size %d %d" % (len(r), size))
   elif hashlib.sha256(data).digest() != hash:
     print("Hash mismatch")
-  return r
+  return r    
+  
 
 def parse_payload(payload_f, partition, out_f):
   BLOCK_SIZE = 4096
   for operation in partition.operations:
     e = operation.dst_extents[0]
     data = payload_f.ReadDataBlob(operation.data_offset, operation.data_length)
+    
+    
     out_f.seek(e.start_block * BLOCK_SIZE)
     if operation.type == update_metadata_pb2.InstallOperation.REPLACE:
       out_f.write(data)
